@@ -1,0 +1,5 @@
+results/
+output/
+*.csv
+*.h5
+*.dat
