@@ -73,3 +73,53 @@ class NeumannBc:
             self._phi[-1] = self._phi[-2] + self._gradient*self._grid.dx_PE[-1]
         else:
             raise ValueError("Unknown boundary location")
+            
+class RobinBc:
+    """Class defining a Robin boundary condition"""
+    
+    def __init__(self, phi, grid, h, k, To, loc):
+        """
+        phi  : field variable array
+        grid : grid object
+        h    : convection coefficient [W/m^2-K]
+        k    : thermal conductivity [W/m-K]
+        To   : ambient temperature [C or K]
+        loc  : boundary location
+        """
+        self._phi = phi
+        self._h = h
+        self._k = k
+        self._To = To
+        self._grid = grid
+        self._loc = loc
+        
+    def value(self):
+        """Return the boundary condition value"""
+        if self._loc is BoundaryLocation.WEST:
+            return (self._phi[1] + self._grid.dx_WP[0] * (self._h/self._k) * self._To) / (1 + self._grid.dx_WP[0] * (self._h/self._k))
+        elif self._loc is BoundaryLocation.EAST:
+            return (self._phi[-2] + self._grid.dx_PE[-1] * (self._h/self._k) * self._To) / (1 + self._grid.dx_PE[-1] * (self._h/self._k))
+        else:
+            raise ValueError("Unknown boundary location")
+    
+    def coeff(self):
+        """Return the linearization coefficient"""
+        if self._loc is BoundaryLocation.WEST:
+            dx = self._grid.dx_WP[0]
+
+        elif self._loc is BoundaryLocation.EAST:
+            dx = self._grid.dx_PE[-1]
+
+        else:
+            raise ValueError("Unknown boundary location")
+            
+        return 1.0 / (1.0 + self._h * dx / self._k)
+    
+    def apply(self):
+        """Applies the boundary condition in the referenced field variable array"""
+        if self._loc is BoundaryLocation.WEST:
+            self._phi[0] = (self._phi[1] + self._grid.dx_WP[0] * (self._h/self._k) * self._To) / (1 + self._grid.dx_WP[0] * (self._h/self._k))
+        elif self._loc is BoundaryLocation.EAST:
+            self._phi[-1] = (self._phi[-2] + self._grid.dx_PE[-1] * (self._h/self._k) * self._To) / (1 + self._grid.dx_PE[-1] * (self._h/self._k))
+        else:
+            raise ValueError("Unknown boundary location")
