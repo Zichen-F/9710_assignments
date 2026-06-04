@@ -65,3 +65,58 @@ class SurfaceConvectionModel:
         coeffs.accumulate_rP(source)
 
         return coeffs
+        
+class FirstOrderTransientModel:
+    """Class defining a first order implicit transient model"""
+
+    def __init__(self, grid, T, Told, rho, cp, dt):
+        """Constructor"""
+        self._grid = grid
+        self._T = T
+        self._Told = Told
+        self._rho = rho
+        self._cp = cp
+        self._dt = dt
+
+    def add(self, coeffs):
+        """Function to add transient term to coefficient arrays"""
+
+        # Calculate the transient term
+        rp_coeff = (self._rho * self._cp * self._grid.vol/ self._dt) * (self._T[1:-1] - self._Told[1:-1])
+
+        # Calculate the linearization coefficient
+        ap_coeff = (self._rho * self._cp * self._grid.vol/ dt)
+        
+        # Add to coefficient arrays
+        coeffs.accumulate_aP(ap_coeff)
+        coeffs.accumulate_rP(rp_coeff)
+        
+        return coeffs
+
+class SecondOrderTransientModel:
+    """Class defining a second order implicit transient model"""
+
+    def __init__(self, grid, T, Told, Told2, rho, cp, dt):
+        """Constructor"""
+        self._grid = grid
+        self._T = T
+        self._Told = Told
+        self._Told2 = Told2
+        self._rho = rho
+        self._cp = cp
+        self._dt = dt
+
+    def add(self, coeffs):
+        """Function to add transient term to coefficient arrays"""
+        
+        # Calculate the transient term rhp * cp * V *(3T - 4Told + T^Told2) / (2 dt)
+        rp_coeff = self._rho * self._cp * self._grid.vol * (3.0 * self._T[1:-1] - 4.0 * self._Told[1:-1] + self._Told2[1:-1]) / (2.0 * self._dt)
+
+        # Calculate the linearization coefficient 3 rho cp V / (2 dt)
+        ap_coeff = 3.0 * self._rho * self._cp * self._grid.vol / (2.0 * self._dt)
+        
+        # Add to coefficient arrays
+        coeffs.accumulate_aP(ap_coeff)
+        coeffs.accumulate_rP(rp_coeff)
+        
+        return coeffs
