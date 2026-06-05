@@ -85,7 +85,7 @@ class FirstOrderTransientModel:
         rp_coeff = (self._rho * self._cp * self._grid.vol/ self._dt) * (self._T[1:-1] - self._Told[1:-1])
 
         # Calculate the linearization coefficient
-        ap_coeff = (self._rho * self._cp * self._grid.vol/ dt)
+        ap_coeff = (self._rho * self._cp * self._grid.vol/ self._dt)
         
         # Add to coefficient arrays
         coeffs.accumulate_aP(ap_coeff)
