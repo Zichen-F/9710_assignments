@@ -278,7 +278,7 @@ class QUICKAdvectionModel:
         self._phi = phi
         self._Uhe = Uhe
         self._rho = rho
-        self._cp = cp
+        self._const = const
         self._west_bc = west_bc
         self._east_bc = east_bc
 
@@ -288,27 +288,24 @@ class QUICKAdvectionModel:
 
     def add(self, coeffs):
         """Function to add deferred-correction QUICK advection terms"""
-        
-        #UDS weighting factors
+
+        # Calculate UDS weighting factors from flow direction
         for i in range(self._grid.ncv + 1):
             if self._Uhe[i] >= 0.0:
                 self._alphae[i] = 1.0
             else:
                 self._alphae[i] = -1.0
 
-        # Boundary faces:
-        self._alphae[0] = 0.0
-        self._alphae[-1] = 0.0
-        
         # UDS face values
         self._phie_uds = (
             (1.0 + self._alphae) / 2.0 * self._phi[0:-1]
             + (1.0 - self._alphae) / 2.0 * self._phi[1:]
         )
 
-        # QUICK face values
+        # Start QUICK face values from UDS values
         self._phie_quick[:] = self._phie_uds[:]
 
+        # QUICK interpolation on interior faces only
         for i in range(1, self._grid.ncv):
             if self._Uhe[i] >= 0.0:
                 self._phie_quick[i] = (
@@ -323,11 +320,10 @@ class QUICKAdvectionModel:
                     - self._phi[i + 2]
                 ) / 8.0
 
-
-        #Face mass fluxes
+        # Face mass fluxes
         mdote = self._rho * self._Uhe * self._grid.Af
 
-        #UDS fluxes
+        # UDS fluxes
         flux_w_uds = self._const * mdote[:-1] * self._phie_uds[:-1]
         flux_e_uds = self._const * mdote[1:]  * self._phie_uds[1:]
 
@@ -339,16 +335,17 @@ class QUICKAdvectionModel:
 
         flux_quick = flux_e_quick - flux_w_quick
 
-        # F = F_UDS + (F_QUICK - F_UDS)
+        # Deferred correction:
+        # implicit UDS + explicit QUICK correction
         flux = flux_uds + (flux_quick - flux_uds)
 
-        #Mass imbalance term
+        # Mass imbalance term
         imbalance = (
-            - self._cp * mdote[1:]  * self._phi[1:-1]
-            + self._cp * mdote[:-1] * self._phi[1:-1]
+            - self._const * mdote[1:]  * self._phi[1:-1]
+            + self._const * mdote[:-1] * self._phi[1:-1]
         )
 
-        #Linearization coefficients from UDS only
+        # Linearization coefficients from UDS only
         coeffW = - self._const * mdote[:-1] * (1.0 + self._alphae[:-1]) / 2.0
         coeffE =   self._const * mdote[1:]  * (1.0 - self._alphae[1:])  / 2.0
         coeffP = - coeffW - coeffE
@@ -364,8 +361,7 @@ class QUICKAdvectionModel:
         coeffs.accumulate_aP(coeffP)
         coeffs.accumulate_aW(coeffW)
         coeffs.accumulate_aE(coeffE)
-
         coeffs.accumulate_rP(flux)
         coeffs.accumulate_rP(imbalance)
 
-        return coeffs  
+        return coeffs
