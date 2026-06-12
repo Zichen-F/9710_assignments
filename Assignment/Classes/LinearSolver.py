@@ -30,15 +30,6 @@ def get_sparse_matrix(coeffs):
     
     return csr_matrix((data, (rows, cols)))
 
-def solve(coeffs):
-    """Function to solve the linear system and return the correction field"""
-    # Single scalar equation
-    if len(coeffs) == 1:
-        A = get_sparse_matrix(coeffs[0])
-        b = -coeffs[0].rP
-
-        return spsolve(A, b)
-
 def get_sparse_matrix_4(PP_coeffs, PU_coeffs, UP_coeffs, UU_coeffs):
     """Function to return a sparse matrix representation of a set of scalar coefficients"""
 
@@ -161,3 +152,43 @@ def solve_4(PP_coeffs, PU_coeffs, UP_coeffs, UU_coeffs):
         dU[i] = res[2*i+1]
 
     return dP, dU
+    
+def solve(*args):
+    """
+    Solve either:
+
+    1. Single scalar equation:
+        dphi = solve(coeffs)
+
+    2. Coupled pressure-velocity system:
+        dP, dU = solve_4(PP_coeffs, PU_coeffs, UP_coeffs, UU_coeffs)
+    """
+
+    # ------------------------------------------------------------
+    # Case 1: solve(coeffs)
+    # ------------------------------------------------------------
+    if len(args) == 1:
+        coeffs = args[0]
+
+        A = get_sparse_matrix(coeffs)
+        b = -coeffs.rP
+
+        return spsolve(A, b)
+
+    # ------------------------------------------------------------
+    # Case 2: solve(PP_coeffs, PU_coeffs, UP_coeffs, UU_coeffs)
+    # ------------------------------------------------------------
+    elif len(args) == 4:
+        PP_coeffs, PU_coeffs, UP_coeffs, UU_coeffs = args
+
+        return solve_4(PP_coeffs, PU_coeffs, UP_coeffs, UU_coeffs)
+
+    # ------------------------------------------------------------
+    # Invalid input
+    # ------------------------------------------------------------
+    else:
+        raise ValueError(
+            "solve() expects either 1 input or 4 inputs:\n"
+            "  solve(coeffs)\n"
+            "  solve(PP_coeffs, PU_coeffs, UP_coeffs, UU_coeffs)"
+        )
